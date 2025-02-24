@@ -17,12 +17,6 @@ public class EmployeeParamDAO {
 
     public void insertWithProcedure(final EmployeeEntity entity) {
         try (
-//                não foi utilizado pra exemplificar o insert com procedure como visto abaixo
-//                var connection = ConnectionUtil.getConnection();
-//                var statement = connection.prepareStatement(
-//                        "INSERT INTO employees (name, salary, birthday) values (?, ?, ?);"
-//                );
-
                 var connection = ConnectionUtil.getConnection();
                 var statement = connection.prepareCall(
                         "call prc_insert_employee(?, ?, ?, ?);"
@@ -32,26 +26,72 @@ public class EmployeeParamDAO {
 
             statement.setString(2, entity.getName());
             statement.setBigDecimal(3, entity.getSalary());
-            statement.setTimestamp(4,
-                    Timestamp.valueOf(entity.getBirthday().atZoneSimilarLocal(UTC).toLocalDateTime())
-            );
+            var timestamp = Timestamp.valueOf(entity.getBirthday().atZoneSimilarLocal(UTC).toLocalDateTime());
+            statement.setTimestamp(4, timestamp);
 
-//          o statement executeUpdate foi substituído pelo execute, o qual executa a procedure feita
-//          statement.executeUpdate();
             statement.execute();
-
-//          if (statement instanceof StatementImpl impl) {
-//              entity.setId(impl.getLastInsertID());
-//          }
-//          da mesma forma que o executeUpdate foi substituído, o if statement também foi pelo method seguinte:
-
             entity.setId(statement.getLong(1));
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
     }
 
+    public void insert(final EmployeeEntity entity) {
+        try (
+                var connection = ConnectionUtil.getConnection();
+                var statement = connection.prepareStatement(
+                        "INSERT INTO employees (name, salary, birthday) values (?, ?, ?);"
+                );
+        ) {
+            statement.setString(1, entity.getName());
+            statement.setBigDecimal(2, entity.getSalary());
+            var timestamp = Timestamp.valueOf(entity.getBirthday().atZoneSimilarLocal(UTC).toLocalDateTime());
+            statement.setTimestamp(3, timestamp);
 
+            statement.executeUpdate();
+
+            if (statement instanceof StatementImpl impl) {
+                entity.setId(impl.getLastInsertID());
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    // method para insert em lotes
+    public void insertBatch(final List<EmployeeEntity> entities) {
+        // o primeiro try/catch tenta fazer a conexão, caso ocorra exceção, essa será relacionada à conexão
+        try (var connection = ConnectionUtil.getConnection()) {
+            var sql = "INSERT INTO employees (name, salary, birthday) values (?, ?, ?);";
+            // o segundo try/catch tenta preparar a transação, caso ocorra exceção, essa será relacionada a mesma
+            try (var statement = connection.prepareStatement(sql)) {
+                // desabilita a atomicidade automática do sql,
+                // passando a responsabilidade da transação para o dev fazer de forma manual
+                connection.setAutoCommit(false);
+                var i = 1;
+                for (var entity : entities) {
+                    statement.setString(1, entity.getName());
+                    statement.setBigDecimal(2, entity.getSalary());
+                    var timestamp = Timestamp.valueOf(entity.getBirthday().atZoneSimilarLocal(UTC).toLocalDateTime());
+                    statement.setTimestamp(3, timestamp);
+                    statement.addBatch();
+                    // dividir o batch em lotes de mil
+                    if (i == 1000) {
+                        statement.executeBatch();
+                        i = 1;
+                    }
+                    i++;
+                }
+                connection.commit();
+            } catch (SQLException ex) {
+                // reverte a transação caso o statement (transação) falhe
+                connection.rollback();
+                ex.printStackTrace();
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
 
     public void update(final EmployeeEntity entity) {
         try (
@@ -125,7 +165,7 @@ public class EmployeeParamDAO {
             statement.executeQuery();
             var resultSet = statement.getResultSet();
 
-            if (resultSet.next()){
+            if (resultSet.next()) {
                 entity.setId(resultSet.getLong("id"));
                 entity.setName(resultSet.getString("name"));
                 entity.setSalary(resultSet.getBigDecimal("salary"));
