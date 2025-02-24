@@ -1,9 +1,7 @@
 package br.com.dio;
 
-import br.com.dio.persistence.ConnectionUtil;
-import br.com.dio.persistence.EmployeeAuditDAO;
-import br.com.dio.persistence.EmployeeDAO;
-import br.com.dio.persistence.EmployeeParamDAO;
+import br.com.dio.persistence.*;
+import br.com.dio.persistence.entity.ContactEntity;
 import br.com.dio.persistence.entity.EmployeeEntity;
 import net.datafaker.Faker;
 import org.flywaydb.core.Flyway;
@@ -24,6 +22,7 @@ public class Main {
 //  private final static EmployeeDAO employeeDAO = new EmployeeDAO();
     private final static EmployeeParamDAO employeeDAO = new EmployeeParamDAO();
     private final static EmployeeAuditDAO employeeAuditDAO = new EmployeeAuditDAO();
+    private final static ContactDAO contactDAO = new ContactDAO();
     private final static Faker faker = new Faker(Locale.of("pt", "BR"));
 
     public static void main(String[] args) {
@@ -33,16 +32,30 @@ public class Main {
                 .load();
         flyway.migrate();
 
-        // usando o faker para gerar 4000 entidades
-        var entities = Stream.generate(() -> {
-            var employee = new EmployeeEntity();
-            employee.setName(faker.name().fullName());
-            employee.setSalary(new BigDecimal(faker.number().digits(4)));
-            employee.setBirthday(OffsetDateTime.of(faker.date().birthdayLocalDate(16, 40), LocalTime.MIN, UTC));
-            return employee;
-        }).limit(4000).toList();
+        System.out.println(employeeDAO.findById(2));
 
-        employeeDAO.insertBatch(entities);
+//        var employee = new EmployeeEntity();
+//        employee.setName("Maria");
+//        employee.setSalary(new BigDecimal(2500));
+//        employee.setBirthday(OffsetDateTime.now().minusYears(16));
+//        employeeDAO.insert(employee);
+
+//        var contact = new ContactEntity();
+//        contact.setDescription("luiz@poderoso.com");
+//        contact.setType("e-mail");
+//        contact.setEmployee(employee);
+//        contactDAO.insert(contact);
+
+//        // usando o faker para gerar 4000 entidades
+//        var entities = Stream.generate(() -> {
+//            var employee = new EmployeeEntity();
+//            employee.setName(faker.name().fullName());
+//            employee.setSalary(new BigDecimal(faker.number().digits(4)));
+//            employee.setBirthday(OffsetDateTime.of(faker.date().birthdayLocalDate(16, 40), LocalTime.MIN, UTC));
+//            return employee;
+//        }).limit(4000).toList();
+//
+//        employeeDAO.insertBatch(entities);
 
 //        var entity = new EmployeeEntity();
 //        entity.setName("Beta");

@@ -1,8 +1,10 @@
 package br.com.dio.persistence;
 
+import br.com.dio.persistence.entity.ContactEntity;
 import br.com.dio.persistence.entity.EmployeeEntity;
 import com.mysql.cj.jdbc.StatementImpl;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
@@ -133,11 +135,20 @@ public class EmployeeParamDAO {
 
     public List<EmployeeEntity> findAll() {
         List<EmployeeEntity> entities = new ArrayList<>();
+        var sql = """
+                 SELECT e.*,
+                        c.id contact_id,
+                        c.description,
+                        c.type
+                 FROM employees e\s
+                 INNER JOIN contacts c\s
+                 ON c.employee_id = e.id;
+                """;
         try (
                 var connection = ConnectionUtil.getConnection();
                 var statement = connection.createStatement()
         ) {
-            statement.executeQuery("SELECT * FROM employees ORDER BY name ASC");
+            statement.executeQuery(sql);
             var resultSet = statement.getResultSet();
             while (resultSet.next()) {
                 var entity = new EmployeeEntity();
@@ -156,9 +167,24 @@ public class EmployeeParamDAO {
 
     public EmployeeEntity findById(long id) {
         EmployeeEntity entity = new EmployeeEntity();
+        // inner join traz apenas os employees que tenham contacts
+        // utilizando um left join, haverá retorno de todos os employees, incluindo os que não tenham contacts
+        var sql = """
+                 SELECT e.id employee_id,
+                        e.name,
+                        e.salary,
+                        e.birthday,
+                        c.id contact_id,
+                        c.description,
+                        c.type\s
+                 FROM employees e\s
+                 LEFT JOIN contacts c\s
+                 ON c.employee_id = e.id\s
+                 WHERE e.id = ?;
+                """;
         try (
                 var connection = ConnectionUtil.getConnection();
-                var statement = connection.prepareStatement("SELECT * FROM employees WHERE id = ?;")
+                var statement = connection.prepareStatement(sql)
         ) {
             statement.setLong(1, id);
 
@@ -166,11 +192,19 @@ public class EmployeeParamDAO {
             var resultSet = statement.getResultSet();
 
             if (resultSet.next()) {
-                entity.setId(resultSet.getLong("id"));
+                entity.setId(resultSet.getLong("employee_id"));
                 entity.setName(resultSet.getString("name"));
                 entity.setSalary(resultSet.getBigDecimal("salary"));
                 var birthdayInstant = resultSet.getTimestamp("birthday").toInstant();
                 entity.setBirthday(OffsetDateTime.ofInstant(birthdayInstant, UTC));
+                // definindo contact
+                if (resultSet.getLong("contact_id") != 0) {
+                    var contact = new ContactEntity();
+                    contact.setId(resultSet.getLong("contact_id"));
+                    contact.setDescription(resultSet.getString("description"));
+                    contact.setType(resultSet.getString("type"));
+                    entity.setContact(contact);
+                }
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
