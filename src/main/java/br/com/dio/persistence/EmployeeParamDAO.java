@@ -4,29 +4,48 @@ import br.com.dio.persistence.entity.EmployeeEntity;
 import com.mysql.cj.jdbc.StatementImpl;
 
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 import static java.time.ZoneOffset.UTC;
+import static java.util.TimeZone.LONG;
 
-public class EmployeeDAO {
+public class EmployeeParamDAO {
 
-    public void insert(final EmployeeEntity entity) {
+    public void insertWithProcedure(final EmployeeEntity entity) {
         try (
+//                não foi utilizado pra exemplificar o insert com procedure como visto abaixo
+//                var connection = ConnectionUtil.getConnection();
+//                var statement = connection.prepareStatement(
+//                        "INSERT INTO employees (name, salary, birthday) values (?, ?, ?);"
+//                );
+
                 var connection = ConnectionUtil.getConnection();
-                var statement = connection.createStatement()
+                var statement = connection.prepareCall(
+                        "call prc_insert_employee(?, ?, ?, ?);"
+                )
         ) {
-            var sql = "INSERT INTO employees (name, salary, birthday) values ('" +
-                    entity.getName() + "', " +
-                    entity.getSalary().toString() + ", '" +
-                    formatOffsetDateTime(entity.getBirthday()) + "')";
-            statement.executeUpdate(sql);
-            System.out.printf("Foram afetados %s registros na base de dados.", statement.getUpdateCount());
-            if (statement instanceof StatementImpl impl) {
-                entity.setId(impl.getLastInsertID());
-            }
+            statement.registerOutParameter(1, LONG);
+
+            statement.setString(2, entity.getName());
+            statement.setBigDecimal(3, entity.getSalary());
+            statement.setTimestamp(4,
+                    Timestamp.valueOf(entity.getBirthday().atZoneSimilarLocal(UTC).toLocalDateTime())
+            );
+
+//          o statement executeUpdate foi substituído pelo execute, o qual executa a procedure feita
+//          statement.executeUpdate();
+            statement.execute();
+
+//          if (statement instanceof StatementImpl impl) {
+//              entity.setId(impl.getLastInsertID());
+//          }
+//          da mesma forma que o executeUpdate foi substituído, o if statement também foi pelo method seguinte:
+
+            entity.setId(statement.getLong(1));
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -37,14 +56,18 @@ public class EmployeeDAO {
     public void update(final EmployeeEntity entity) {
         try (
                 var connection = ConnectionUtil.getConnection();
-                var statement = connection.createStatement()
+                var statement = connection.prepareStatement(
+                        "UPDATE employees SET name = ?, salary = ?, birthday = ? WHERE id = ?;"
+                )
         ) {
-            var sql = "UPDATE employees set " +
-                    "name     = '" + entity.getName() + "', " +
-                    "salary   = " + entity.getSalary().toString() + ", " +
-                    "birthday = '" + formatOffsetDateTime(entity.getBirthday()) + "'" +
-                    "WHERE id = " + entity.getId();
-            statement.executeUpdate(sql);
+            statement.setString(1, entity.getName());
+            statement.setBigDecimal(2, entity.getSalary());
+            statement.setTimestamp(3,
+                    Timestamp.valueOf(entity.getBirthday().atZoneSimilarLocal(UTC).toLocalDateTime())
+            );
+            statement.setLong(4, entity.getId());
+
+            statement.executeUpdate();
             statement.getUpdateCount();
             System.out.printf("Foram afetados %s registros na base de dados.", statement.getUpdateCount());
             if (statement instanceof StatementImpl impl) {
@@ -58,10 +81,11 @@ public class EmployeeDAO {
     public void delete(final long id) {
         try (
                 var connection = ConnectionUtil.getConnection();
-                var statement = connection.createStatement()
+                var statement = connection.prepareStatement("DELETE FROM employees WHERE id = ?;")
         ) {
-            var sql = "DELETE FROM employees where id = " + id;
-            statement.executeUpdate(sql);
+            statement.setLong(1, id);
+
+            statement.executeUpdate();
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -94,9 +118,11 @@ public class EmployeeDAO {
         EmployeeEntity entity = new EmployeeEntity();
         try (
                 var connection = ConnectionUtil.getConnection();
-                var statement = connection.createStatement()
+                var statement = connection.prepareStatement("SELECT * FROM employees WHERE id = ?;")
         ) {
-            statement.executeQuery("SELECT * FROM employees WHERE id = " + id);
+            statement.setLong(1, id);
+
+            statement.executeQuery();
             var resultSet = statement.getResultSet();
 
             if (resultSet.next()){
