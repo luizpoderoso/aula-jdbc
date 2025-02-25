@@ -1,12 +1,12 @@
 package br.com.dio.persistence;
 
 import br.com.dio.persistence.entity.ContactEntity;
+import br.com.dio.persistence.entity.EmployeeEntity;
 import com.mysql.cj.jdbc.StatementImpl;
 
 import java.sql.SQLException;
-import java.sql.Timestamp;
-
-import static java.time.ZoneOffset.UTC;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ContactDAO {
 
@@ -29,6 +29,30 @@ public class ContactDAO {
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
+    }
+
+    public List<ContactEntity> findAllByEmployeeId(long employeeId) {
+        var entities = new ArrayList<ContactEntity>();
+        try (
+                var connection = ConnectionUtil.getConnection();
+                var statement = connection.prepareStatement("SELECT * FROM contacts where employee_id = ?")
+        ) {
+            statement.setLong(1, employeeId);
+            statement.executeQuery();
+            var resultSet = statement.getResultSet();
+            while (resultSet.next()) {
+                var entity = new ContactEntity();
+                entity.setId(resultSet.getLong("id"));
+                entity.setDescription(resultSet.getString("description"));
+                entity.setType(resultSet.getString("type"));
+                entity.setEmployee(new EmployeeEntity());
+                entity.getEmployee().setId(resultSet.getLong("employee_id"));
+                entities.add(entity);
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        return entities;
     }
 
 }

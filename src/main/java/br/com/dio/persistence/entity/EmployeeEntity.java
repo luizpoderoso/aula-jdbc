@@ -4,6 +4,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Data
 public class EmployeeEntity {
@@ -16,5 +17,5 @@ public class EmployeeEntity {
 
     private OffsetDateTime birthday;
 
-    private ContactEntity contact;
+    private List<ContactEntity> contacts;
 }

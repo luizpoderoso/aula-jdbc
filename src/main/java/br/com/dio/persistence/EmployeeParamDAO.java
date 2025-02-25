@@ -1,10 +1,8 @@
 package br.com.dio.persistence;
 
-import br.com.dio.persistence.entity.ContactEntity;
 import br.com.dio.persistence.entity.EmployeeEntity;
 import com.mysql.cj.jdbc.StatementImpl;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
@@ -16,6 +14,8 @@ import static java.time.ZoneOffset.UTC;
 import static java.util.TimeZone.LONG;
 
 public class EmployeeParamDAO {
+
+    private final ContactDAO contactDAO = new ContactDAO();
 
     public void insertWithProcedure(final EmployeeEntity entity) {
         try (
@@ -64,7 +64,7 @@ public class EmployeeParamDAO {
     public void insertBatch(final List<EmployeeEntity> entities) {
         // o primeiro try/catch tenta fazer a conexão, caso ocorra exceção, essa será relacionada à conexão
         try (var connection = ConnectionUtil.getConnection()) {
-            var sql = "INSERT INTO employees (name, salary, birthday) values (?, ?, ?);";
+            var sql = "INSERT INTO employees (name, salary, birthday) values (?, ?, ?)";
             // o segundo try/catch tenta preparar a transação, caso ocorra exceção, essa será relacionada a mesma
             try (var statement = connection.prepareStatement(sql)) {
                 // desabilita a atomicidade automática do sql,
@@ -135,20 +135,11 @@ public class EmployeeParamDAO {
 
     public List<EmployeeEntity> findAll() {
         List<EmployeeEntity> entities = new ArrayList<>();
-        var sql = """
-                 SELECT e.*,
-                        c.id contact_id,
-                        c.description,
-                        c.type
-                 FROM employees e\s
-                 INNER JOIN contacts c\s
-                 ON c.employee_id = e.id;
-                """;
         try (
                 var connection = ConnectionUtil.getConnection();
                 var statement = connection.createStatement()
         ) {
-            statement.executeQuery(sql);
+            statement.executeQuery("SELECT * FROM employees");
             var resultSet = statement.getResultSet();
             while (resultSet.next()) {
                 var entity = new EmployeeEntity();
@@ -157,6 +148,7 @@ public class EmployeeParamDAO {
                 entity.setSalary(resultSet.getBigDecimal("salary"));
                 var birthdayInstant = resultSet.getTimestamp("birthday").toInstant();
                 entity.setBirthday(OffsetDateTime.ofInstant(birthdayInstant, UTC));
+                entity.setContacts(contactDAO.findAllByEmployeeId(resultSet.getLong("id")));
                 entities.add(entity);
             }
         } catch (SQLException ex) {
@@ -170,13 +162,7 @@ public class EmployeeParamDAO {
         // inner join traz apenas os employees que tenham contacts
         // utilizando um left join, haverá retorno de todos os employees, incluindo os que não tenham contacts
         var sql = """
-                 SELECT e.id employee_id,
-                        e.name,
-                        e.salary,
-                        e.birthday,
-                        c.id contact_id,
-                        c.description,
-                        c.type\s
+                 SELECT e.id employee_id, e.name, e.salary, e.birthday, c.id contact_id, c.description, c.type\s
                  FROM employees e\s
                  LEFT JOIN contacts c\s
                  ON c.employee_id = e.id\s
@@ -187,24 +173,15 @@ public class EmployeeParamDAO {
                 var statement = connection.prepareStatement(sql)
         ) {
             statement.setLong(1, id);
-
             statement.executeQuery();
             var resultSet = statement.getResultSet();
-
             if (resultSet.next()) {
                 entity.setId(resultSet.getLong("employee_id"));
                 entity.setName(resultSet.getString("name"));
                 entity.setSalary(resultSet.getBigDecimal("salary"));
                 var birthdayInstant = resultSet.getTimestamp("birthday").toInstant();
                 entity.setBirthday(OffsetDateTime.ofInstant(birthdayInstant, UTC));
-                // definindo contact
-                if (resultSet.getLong("contact_id") != 0) {
-                    var contact = new ContactEntity();
-                    contact.setId(resultSet.getLong("contact_id"));
-                    contact.setDescription(resultSet.getString("description"));
-                    contact.setType(resultSet.getString("type"));
-                    entity.setContact(contact);
-                }
+                entity.setContacts(contactDAO.findAllByEmployeeId(id));
             }
         } catch (SQLException ex) {
             ex.printStackTrace();

@@ -32,19 +32,25 @@ public class Main {
                 .load();
         flyway.migrate();
 
-        System.out.println(employeeDAO.findById(2));
+        employeeDAO.findAll().forEach(System.out::println);
 
 //        var employee = new EmployeeEntity();
-//        employee.setName("Maria");
+//        employee.setName("Luiz Poderoso");
 //        employee.setSalary(new BigDecimal(2500));
-//        employee.setBirthday(OffsetDateTime.now().minusYears(16));
+//        employee.setBirthday(OffsetDateTime.now().minusYears(17).minusMonths(7).minusDays(22));
 //        employeeDAO.insert(employee);
-
-//        var contact = new ContactEntity();
-//        contact.setDescription("luiz@poderoso.com");
-//        contact.setType("e-mail");
-//        contact.setEmployee(employee);
-//        contactDAO.insert(contact);
+//
+//        var contact1 = new ContactEntity();
+//        contact1.setDescription("luiz@poderoso.com");
+//        contact1.setType("e-mail");
+//        contact1.setEmployee(employee);
+//        contactDAO.insert(contact1);
+//
+//        var contact2 = new ContactEntity();
+//        contact2.setDescription("(79) xxxxx-xxxx");
+//        contact2.setType("phone");
+//        contact2.setEmployee(employee);
+//        contactDAO.insert(contact2);
 
 //        // usando o faker para gerar 4000 entidades
 //        var entities = Stream.generate(() -> {
