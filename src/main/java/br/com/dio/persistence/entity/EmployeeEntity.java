@@ -18,4 +18,6 @@ public class EmployeeEntity {
     private OffsetDateTime birthday;
 
     private List<ContactEntity> contacts;
+
+    private List<ModuleEntity> modules;
 }

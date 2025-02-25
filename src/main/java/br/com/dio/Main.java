@@ -1,8 +1,10 @@
 package br.com.dio;
 
 import br.com.dio.persistence.*;
+import br.com.dio.persistence.entity.AccessEntity;
 import br.com.dio.persistence.entity.ContactEntity;
 import br.com.dio.persistence.entity.EmployeeEntity;
+import br.com.dio.persistence.entity.ModuleEntity;
 import net.datafaker.Faker;
 import org.flywaydb.core.Flyway;
 
@@ -23,6 +25,8 @@ public class Main {
     private final static EmployeeParamDAO employeeDAO = new EmployeeParamDAO();
     private final static EmployeeAuditDAO employeeAuditDAO = new EmployeeAuditDAO();
     private final static ContactDAO contactDAO = new ContactDAO();
+    private final static ModuleDAO moduleDAO = new ModuleDAO();
+    private final static AccessDAO accessDAO = new AccessDAO();
     private final static Faker faker = new Faker(Locale.of("pt", "BR"));
 
     public static void main(String[] args) {
@@ -32,7 +36,43 @@ public class Main {
                 .load();
         flyway.migrate();
 
-        employeeDAO.findAll().forEach(System.out::println);
+        var modules = moduleDAO.findModulesByEmployeeId(11);
+        System.out.println(modules);
+
+//        var modules = moduleDAO.findAll();
+//        var employee = new EmployeeEntity();
+//        employee.setName(faker.name().fullName());
+//        employee.setSalary(BigDecimal.valueOf(5000));
+//        employee.setBirthday(OffsetDateTime.of(faker.date().birthdayLocalDate(16, 40), LocalTime.MIN, UTC));
+//        employee.setModules(modules);
+//        employeeDAO.insert(employee);
+
+//        var module = new ModuleEntity();
+//        module.setName("Estoque");
+//        moduleDAO.insert(module);
+//        var employee = employeeDAO.findById(5);
+//        var access = new AccessEntity();
+//        access.setEmployee(employee);
+//        access.setModule(module);
+//        accessDAO.insert(access);
+
+//        var module = moduleDAO.findById(1);
+//        var employee1 = employeeDAO.findById(5);
+//        var employee2 = employeeDAO.findById(6);
+//        var access1 = new AccessEntity();
+//        access1.setModule(module);
+//        access1.setEmployee(employee1);
+//        accessDAO.insert(access1);
+//        var access2 = new AccessEntity();
+//        access2.setModule(module);
+//        access2.setEmployee(employee2);
+//        accessDAO.insert(access2);
+
+//        var module = new ModuleEntity();
+//        module.setName("Financeiro");
+//        moduleDAO.insert(module);
+
+//        employeeDAO.findAll().forEach(System.out::println);
 
 //        var employee = new EmployeeEntity();
 //        employee.setName("Luiz Poderoso");

@@ -1,5 +1,6 @@
 package br.com.dio.persistence;
 
+import br.com.dio.persistence.entity.AccessEntity;
 import br.com.dio.persistence.entity.EmployeeEntity;
 import com.mysql.cj.jdbc.StatementImpl;
 
@@ -16,6 +17,7 @@ import static java.util.TimeZone.LONG;
 public class EmployeeParamDAO {
 
     private final ContactDAO contactDAO = new ContactDAO();
+    private final AccessDAO accessDAO = new AccessDAO();
 
     public void insertWithProcedure(final EmployeeEntity entity) {
         try (
@@ -49,12 +51,16 @@ public class EmployeeParamDAO {
             statement.setBigDecimal(2, entity.getSalary());
             var timestamp = Timestamp.valueOf(entity.getBirthday().atZoneSimilarLocal(UTC).toLocalDateTime());
             statement.setTimestamp(3, timestamp);
-
             statement.executeUpdate();
-
             if (statement instanceof StatementImpl impl) {
                 entity.setId(impl.getLastInsertID());
             }
+            entity.getModules().forEach(module -> {
+                var access = new AccessEntity();
+                access.setModule(module);
+                access.setEmployee(entity);
+                accessDAO.insert(access);
+            });
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
